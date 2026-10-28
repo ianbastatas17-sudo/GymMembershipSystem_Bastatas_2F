@@ -96,15 +96,26 @@ public class Authentication {
                 return;
             }
 
-            if (!"ACTIVE".equalsIgnoreCase(user.status())) {
-                System.out.println("Account is still " + user.status());
+            boolean isAdmin =
+                    "ADMIN".equalsIgnoreCase(user.roles());
+
+            boolean isApproved =
+                    "APPROVED".equalsIgnoreCase(user.status());
+
+            boolean isExistingActiveAdmin =
+                    isAdmin && "ACTIVE".equalsIgnoreCase(user.status());
+
+            if (!isApproved && !isExistingActiveAdmin) {
+                System.out.println(
+                        "Account is still " + user.status()
+                );
                 return;
             }
 
             System.out.println("Welcome, " + user.username() + "!");
 
             switch (user.roles().toUpperCase()) {
-                case "ADMIN" -> showRoleMenu("ADMIN");
+                case "ADMIN" -> new AdminMenu(userDao, scanner).display();
                 case "STAFF" -> showRoleMenu("STAFF");
                 case "MEMBER" -> showRoleMenu("MEMBER");
                 default -> System.out.println("Unknown role.");
