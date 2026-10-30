@@ -115,7 +115,8 @@ public class Authentication {
             System.out.println("Welcome, " + user.username() + "!");
 
             switch (user.roles().toUpperCase()) {
-                case "ADMIN" -> new AdminMenu(userDao, scanner).display();
+
+                case "ADMIN" -> new AdminMenu(userDao, scanner, user).display();
                 case "STAFF" -> showRoleMenu("STAFF");
                 case "MEMBER" -> showRoleMenu("MEMBER");
                 default -> System.out.println("Unknown role.");
