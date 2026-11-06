@@ -2,6 +2,7 @@
 package com.scc.ui;
 
 import com.scc.dao.UserDao;
+import com.scc.dao.ActivityLogDao;
 import com.scc.model.User;
 
 import java.sql.SQLException;
@@ -10,15 +11,19 @@ import java.util.Scanner;
 public class Authentication {
 
     private final UserDao userDao;
+    private final ActivityLogDao activityLogDao;
     private final Scanner scanner;
 
     public Authentication(UserDao userDao, Scanner scanner) {
         this.userDao = userDao;
         this.scanner = scanner;
+        this.activityLogDao = new ActivityLogDao();
     }
 
     public void start() {
+
         while (true) {
+
             System.out.println("\n=== GYM MEMBERSHIP SYSTEM ===");
             System.out.println("1. Register");
             System.out.println("2. Login");
@@ -40,7 +45,9 @@ public class Authentication {
     }
 
     private void register() {
+
         try {
+
             System.out.print("Username: ");
             String username = scanner.nextLine().trim();
 
@@ -70,19 +77,27 @@ public class Authentication {
             }
 
             if (userDao.register(username, password, role)) {
+
                 System.out.println("Registration successful!");
                 System.out.println("Account status: PENDING");
+
             } else {
+
                 System.out.println("Username already exists.");
             }
 
         } catch (SQLException e) {
-            System.out.println("Registration error: " + e.getMessage());
+
+            System.out.println(
+                    "Registration error: " + e.getMessage()
+            );
         }
     }
 
     private void login() {
+
         try {
+
             System.out.print("Username: ");
             String username = scanner.nextLine().trim();
 
@@ -92,6 +107,7 @@ public class Authentication {
             User user = userDao.findByUsername(username);
 
             if (user == null || !user.password().equals(password)) {
+
                 System.out.println("Invalid username or password.");
                 return;
             }
@@ -103,42 +119,94 @@ public class Authentication {
                     "APPROVED".equalsIgnoreCase(user.status());
 
             boolean isExistingActiveAdmin =
-                    isAdmin && "ACTIVE".equalsIgnoreCase(user.status());
+                    isAdmin &&
+                            "ACTIVE".equalsIgnoreCase(user.status());
 
             if (!isApproved && !isExistingActiveAdmin) {
+
                 System.out.println(
                         "Account is still " + user.status()
                 );
+
                 return;
             }
 
-            System.out.println("Welcome, " + user.username() + "!");
+            // Record successful login
+            activityLogDao.logAction(
+                    user.id(),
+                    "LOGIN",
+                    "User " + user.username() +
+                            " successfully logged in."
+            );
+
+            System.out.println(
+                    "Welcome, " + user.username() + "!"
+            );
 
             switch (user.roles().toUpperCase()) {
 
-                case "ADMIN" -> new AdminMenu(userDao, scanner, user).display();
-                case "STAFF" -> showRoleMenu("STAFF");
-                case "MEMBER" -> showRoleMenu("MEMBER");
-                default -> System.out.println("Unknown role.");
+                case "ADMIN" ->
+                        new AdminMenu(
+                                userDao, scanner, user
+                        ).display();
+
+                case "STAFF" ->
+                        showRoleMenu("STAFF", user);
+
+                case "MEMBER" ->
+                        showRoleMenu("MEMBER", user);
+
+                default ->
+                        System.out.println("Unknown role.");
             }
 
         } catch (SQLException e) {
-            System.out.println("Login error: " + e.getMessage());
+
+            System.out.println(
+                    "Login error: " + e.getMessage()
+            );
         }
     }
 
-    private void showRoleMenu(String role) {
+    private void showRoleMenu(String role, User user) {
+
         while (true) {
-            System.out.println("\n=== " + role + " DASHBOARD ===");
+
+            System.out.println(
+                    "\n=== " + role + " DASHBOARD ==="
+            );
+
             System.out.println("1. Logout");
             System.out.print("Choose: ");
 
             if (scanner.nextLine().trim().equals("1")) {
-                System.out.println("Logged out.");
+
+                logout(user);
                 return;
             }
 
             System.out.println("Invalid choice.");
+        }
+    }
+
+    private void logout(User user) {
+
+        try {
+
+            activityLogDao.logAction(
+                    user.id(),
+                    "LOGOUT",
+                    "User " + user.username() +
+                            " successfully logged out."
+            );
+
+            System.out.println("Logged out.");
+
+        } catch (SQLException e) {
+
+            System.out.println(
+                    "Logout logging error: " + e.getMessage()
+            );
         }
     }
 }
